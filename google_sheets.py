@@ -1,3 +1,5 @@
+import asyncio
+from hashlib import sha1
 from datetime import date
 
 import httplib2
@@ -12,6 +14,8 @@ SHEET1 = "Лист1"
 ORDER_NUMBER_COL = "заказ №"
 COST_USD_COL = "стоимость,$"
 DELIVERY_DATE_COL = "срок поставки"
+
+_last_table_hash = ""
 
 
 def to_date(s: str) -> date:
@@ -30,6 +34,22 @@ def auth() -> Resource:
     )
     http_auth = credentials.authorize(httplib2.Http())
     return googleapiclient.discovery.build("sheets", "v4", http=http_auth)
+
+
+def get_values_raw(service: Resource) -> tuple[tuple[str]]:
+    """get table values without formating"""
+
+    return (
+        service.spreadsheets()
+        .values()
+        .get(
+            spreadsheetId=config.SPREADSHEET_ID,
+            range=SHEET1,
+            majorDimension="COLUMNS",
+        )
+        .execute()["values"]
+    )
+
 
 def get_values(service: Resource) -> dict[str, list]:
     """
@@ -55,15 +75,30 @@ def get_values(service: Resource) -> dict[str, list]:
     }
     """
 
-    result = service.spreadsheets().values().get(
-        spreadsheetId=config.SPREADSHEET_ID,
-        range=SHEET1,
-        majorDimension="COLUMNS",
-    ).execute()
+    values = {col[0]: col[1:] for col in get_values_raw(service)}
+    return {
+        ORDER_NUMBER_COL: list(map(int, values[ORDER_NUMBER_COL])),
+        COST_USD_COL: list(map(int, values[COST_USD_COL])),
+        DELIVERY_DATE_COL: list(map(to_date, values[DELIVERY_DATE_COL])),
+    }
 
-    values = result["values"]
-    result = {col[0]:col[1:] for col in values}
-    result[ORDER_NUMBER_COL] = list(map(int, result[ORDER_NUMBER_COL]))
-    result[COST_USD_COL] = list(map(int, result[COST_USD_COL]))
-    result[DELIVERY_DATE_COL] = list(map(to_date, result[DELIVERY_DATE_COL]))
-    return result
+
+async def wait_for_table_changes(service: Resource):
+    """
+    check every `config.TABLE_CHECK_COOLDOWN` for changes, if any - return, else - asyncio.sleep
+    if runed first time after programm started: return without waiting
+
+    Args:
+    service - can be received from `auth` function
+    """
+
+    global _last_table_hash
+
+    while 1:
+        # cuz google didn't provide an easy way to set listener or i didn't find it. (websocket or something)
+        new_table_hash = sha1(str(get_values_raw(service)).encode("utf-8")).hexdigest()
+        if new_table_hash == _last_table_hash:
+            await asyncio.sleep(config.TABLE_CHECK_COOLDOWN)
+        else:
+            _last_table_hash = new_table_hash
+            return

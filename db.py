@@ -12,6 +12,7 @@ google_service = None
 
 
 async def update_orders_in_database():
+    """get data from table, add all orders to db, if order already in db (check by order number) - update it"""
     global engine, google_service
 
     if engine is None:
@@ -28,13 +29,22 @@ async def update_orders_in_database():
     values = gs.get_values(google_service)
     rates = await cbrf.get_rates()
 
-    costs_rub = list(map(round, [
-        round(await cbrf.convert("USD", "RUB", float(u), rates))
-        for u in values[gs.COST_USD_COL]
-    ]))
+    costs_rub = list(
+        map(
+            round,
+            [
+                round(await cbrf.convert("USD", "RUB", float(u), rates))
+                for u in values[gs.COST_USD_COL]
+            ],
+        )
+    )
 
     with Session(engine) as session:
-        old_orders: list[models.Order] = session.query(models.Order).filter(models.Order.number.in_(values[gs.ORDER_NUMBER_COL])).all()
+        old_orders: list[models.Order] = (
+            session.query(models.Order)
+            .filter(models.Order.number.in_(values[gs.ORDER_NUMBER_COL]))
+            .all()
+        )
         for old_order in old_orders:
             old_order_index = values[gs.ORDER_NUMBER_COL].index(old_order.number)
             values[gs.ORDER_NUMBER_COL].pop(old_order_index)

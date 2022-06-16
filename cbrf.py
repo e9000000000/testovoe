@@ -7,9 +7,10 @@ import config
 
 Rates = dict[str, float]
 
+
 async def get_rates() -> Rates:
     """
-    return dict with currency codes and rates to RUB received from ЦБРФ  
+    return dict with currency codes and rates to RUB received from ЦБРФ
     internet connection is required
     """
 
@@ -20,13 +21,16 @@ async def get_rates() -> Rates:
 
     codes = [c.text for c in root.iter("CharCode")]
     rates = [float(r.text.replace(",", ".")) for r in root.iter("Value")]
-    result = {c:r for c, r in zip(codes, rates)}
-    result["RUB"] = 1.
+    result = {c: r for c, r in zip(codes, rates)}
+    result["RUB"] = 1.0
     return result
 
-async def convert(cur_from: str, cur_to: str, amount: float, rates: Rates | None=None) -> float:
+
+async def convert(
+    cur_from: str, cur_to: str, amount: float, rates: Rates | None = None
+) -> float:
     """
-    convert from one currency to another  
+    convert from one currency to another
     if no `rates` provided `get_rates` will be used
 
     Example:
