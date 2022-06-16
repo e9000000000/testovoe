@@ -1,9 +1,21 @@
+from datetime import date
+
 import httplib2
 import googleapiclient.discovery
 from googleapiclient.discovery import Resource
 from oauth2client.service_account import ServiceAccountCredentials
 
 import config
+
+
+SHEET1 = "Лист1"
+ORDER_NUMBER_COL = "заказ №"
+COST_USD_COL = "стоимость,$"
+DELIVERY_DATE_COL = "срок поставки"
+
+
+def to_date(s: str) -> date:
+    return date(*map(int, reversed(s.split("."))))
 
 
 def auth() -> Resource:
@@ -21,7 +33,7 @@ def auth() -> Resource:
 
 def get_values(service: Resource) -> dict[str, list]:
     """
-    get all values from 'Лист1' table
+    get all values from table specified in SHEET1 variable
 
     Args:
     service - can be received from `auth` function
@@ -45,9 +57,13 @@ def get_values(service: Resource) -> dict[str, list]:
 
     result = service.spreadsheets().values().get(
         spreadsheetId=config.SPREADSHEET_ID,
-        range="Лист1",
+        range=SHEET1,
         majorDimension="COLUMNS",
     ).execute()
 
     values = result["values"]
-    return {col[0]:col[1:] for col in values}
+    result = {col[0]:col[1:] for col in values}
+    result[ORDER_NUMBER_COL] = list(map(int, result[ORDER_NUMBER_COL]))
+    result[COST_USD_COL] = list(map(int, result[COST_USD_COL]))
+    result[DELIVERY_DATE_COL] = list(map(to_date, result[DELIVERY_DATE_COL]))
+    return result
