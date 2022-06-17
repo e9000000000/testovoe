@@ -1,10 +1,11 @@
 # test
-just started
+near finish
 
 
 # how to run
 ## env variables
 `POSTGRES_PASSWORD` - very strong password from database
+`TGBOT_TOKEN` - set bot [token](https://core.telegram.org/bots/api)
 
 ## google api
 create project [here](https://console.cloud.google.com/apis/dashboard) or use existing  
@@ -26,3 +27,9 @@ python -m pip install poetry
 poetry install
 poetry run python main.py
 ```
+
+# how to use
+## telegram notification
+write to bot:
+- `/start` - enable notifications
+- `/stop` - disable notifications

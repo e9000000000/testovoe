@@ -1,73 +1,81 @@
+from copy import deepcopy
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-import config
-import models
-import cbrf
-import google_sheets as gs
+from config import POSTGRES_DB, POSTGRES_HOST, POSTGRES_PASSWORD, POSTGRES_USER
+from models import TgUser, Order, Base
+from cbrf import get_rates, convert
 
 
-engine = None
-google_service = None
-
-
-async def update_orders_in_database():
-    """get data from table, add all orders to db, if order already in db (check by order number) - update it"""
-    global engine, google_service
-
-    if engine is None:
-        engine = create_engine(
-            f"postgresql+psycopg2://{config.POSTGRES_USER}:{config.POSTGRES_PASSWORD}@{config.POSTGRES_HOST}/{config.POSTGRES_DB}",
+class Db:
+    def __init__(self):
+        self.engine = create_engine(
+            f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}/{POSTGRES_DB}",
             echo=True,
             future=True,
         )
-        models.Base.metadata.create_all(engine)
+        Base.metadata.create_all(self.engine)
 
-    if google_service is None:
-        google_service = gs.auth()
 
-    values = gs.get_values(google_service)
-    rates = await cbrf.get_rates()
+    async def update_orders_in_database(self, values: list[dict]):
+        """get data from table, add all orders to db, if order already in db (check by order number) - update it"""
 
-    costs_rub = list(
-        map(
-            round,
-            [
-                round(await cbrf.convert("USD", "RUB", float(u), rates))
-                for u in values[gs.COST_USD_COL]
-            ],
-        )
-    )
+        values = deepcopy(values)
+        rates = await get_rates()
+        for value in values:
+            value["cost_rub"] = round(await convert("USD", "RUB", float(value["cost_usd"]), rates))
 
-    with Session(engine) as session:
-        old_orders: list[models.Order] = (
-            session.query(models.Order)
-            .filter(models.Order.number.in_(values[gs.ORDER_NUMBER_COL]))
-            .all()
-        )
-        for old_order in old_orders:
-            old_order_index = values[gs.ORDER_NUMBER_COL].index(old_order.number)
-            values[gs.ORDER_NUMBER_COL].pop(old_order_index)
-            old_order.cost_rub = costs_rub.pop(old_order_index)
-            old_order.cost_usd = values[gs.COST_USD_COL].pop(old_order_index)
-            old_order.delivery_date = values[gs.DELIVERY_DATE_COL].pop(old_order_index)
-
-        new_orders = []
-
-        for number, cost_usd, cost_rub, delivery_date in zip(
-            values[gs.ORDER_NUMBER_COL],
-            values[gs.COST_USD_COL],
-            costs_rub,
-            values[gs.DELIVERY_DATE_COL],
-        ):
-            new_orders.append(
-                models.Order(
-                    number=number,
-                    cost_usd=cost_usd,
-                    cost_rub=cost_rub,
-                    delivery_date=delivery_date,
-                )
+        with Session(self.engine) as session:
+            new_numbers = list(map(lambda v: v["number"], values))
+            existing_orders: list[Order] = (
+                session.query(Order)
+                .filter(Order.number.in_(new_numbers))
+                .all()
             )
+            for order in existing_orders:
+                data_index = new_numbers.index(order.number)
+                new_numbers.pop(data_index)
+                old_order_data = values.pop(data_index)
+                order.cost_rub = old_order_data["cost_rub"]
+                order.cost_usd = old_order_data["cost_usd"]
+                order.delivery_date = old_order_data["delivery_date"]
 
-        session.add_all(new_orders)
-        session.commit()
+            new_orders = []
+
+            for data in values:
+                new_orders.append(
+                    Order(
+                        number=data["number"],
+                        cost_usd=data["cost_usd"],
+                        cost_rub=data["cost_rub"],
+                        delivery_date=data["delivery_date"],
+                    )
+                )
+
+            session.add_all(new_orders)
+            session.commit()
+
+    async def enable_notifications(self, tg_id: int):
+        with Session(self.engine) as session:
+            user = session.query(TgUser).filter(TgUser.tg_id==tg_id).one_or_none()
+            if user is None:
+                new_user = TgUser(tg_id=tg_id)
+                session.add(new_user)
+            else:
+                user.notifiable = True
+            session.commit()
+
+    async def disable_notifications(self, tg_id: int):
+        with Session(self.engine) as session:
+            user = session.query(TgUser).filter(TgUser.tg_id==tg_id).one_or_none()
+            if user is None:
+                new_user = TgUser(tg_id=tg_id, notifiable=False)
+                session.add(new_user)
+            else:
+                user.notifiable = False
+            session.commit()
+
+    async def get_notifiable_tg_users(self):
+        with Session(self.engine) as session:
+            return session.query(TgUser).filter(TgUser.notifiable==True).all()
