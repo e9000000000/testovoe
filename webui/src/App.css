@@ -1,0 +1,79 @@
+body {
+  background-color: white;
+  color: black;
+}
+* {
+  padding: 0;
+  margin: 0;
+}
+
+.App {
+  margin-top: 1rem;
+}
+
+.App > .right {
+  grid-area: right;
+  text-align: center;
+}
+
+.App > .left {
+  grid-area: left;
+  width: 50vw;
+}
+
+.App {
+  display: flex;
+  grid-template-areas:
+    'left right'
+}
+
+.total {
+  display: inline-block;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.total > h1 {
+  color: white;
+  background-color: black;
+  font-size: 18pt;
+  font-weight: normal;
+}
+
+.total > p {
+  color: black;
+  border: 1px solid grey;
+  border-width: 0px 1px 1px 1px;
+  font-size: 70pt;
+  font-weight: normal;
+  background-color: white;
+  padding: 0 1rem 0 1rem;
+}
+
+table, td, th {
+  border: 1px solid grey;
+  border-width: 1px 1px 1px 1px;
+  border-collapse: collapse;
+}
+
+td, th {
+  padding: 0.1rem 1rem 0.1rem 1rem;
+}
+
+.orders > thead {
+  color: white;
+  background-color: #07101D;
+  font-size: 14pt;
+}
+
+.orders > thead th, td {
+  padding: 1rem 1rem 1rem 1rem;
+}
+
+
+.orders > tbody {
+  color: black;
+  background-color: #E9F2FE;
+  border: 1px solid grey;
+  border-width: 0px 1px 1px 1px;
+}

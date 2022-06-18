@@ -5,7 +5,9 @@ near finish
 # how to run
 ## env variables
 `POSTGRES_PASSWORD` - very strong password from database
+`POSTGRES_DB` - very strong password from database
 `TGBOT_TOKEN` - set bot [token](https://core.telegram.org/bots/api)
+`PGDATA_PATH` - path to postgres database files
 
 ## google api
 create project [here](https://console.cloud.google.com/apis/dashboard) or use existing  
@@ -13,23 +15,34 @@ enable `Google Drive API` and `Google Sheets API`
 create `Service Account` and add new key in json format  
 provide path to downloaded .json file in `config.py:GOOGLE_CREDITS_PATH`
 
-## database
-install [docker](https://www.docker.com/)
+## frontend
+build
 ```bash
-# TODO: put it in docker-compose
-docker run -e POSTGRES_PASSWORD --net=host postgres
+docker-compose --profile prepare up --build --no-start
+docker-compose --profile run build-webui
+```
+
+## database
+if posetgres data is already initialized docker will not create database, so you have to do it manualy
+```bash
+docker-compose up --build --no-start
+docker-compose run -d --name postgres postgres
+docker exec -it postgres /bin/bash
+psql --user=postgres  # use any user which have rights to create database and another user
+```
+```sql
+CREATE DATABASE yourDatabaseName;
+CREATE USER sameUsernameAsDatabase;
+GRANT ALL PRIVILEGES ON DATABASE yourDatabaseName TO sameUsernameAsDatabase;
 ```
 
 ## run
-install [python3.10](https://www.python.org/)
 ```bash
-python -m pip install poetry
-poetry install
-poetry run python main.py
+docker-compose up
 ```
 
 # how to use
 ## telegram notification
-write to bot:
+bot commands:
 - `/start` - enable notifications
 - `/stop` - disable notifications
