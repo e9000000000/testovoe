@@ -9,14 +9,16 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 from config import SHEET_NAME, SPREADSHEET_ID, TABLE_CHECK_COOLDOWN, GOOGLE_CREDITS_PATH
 
+
 def to_date(s: str) -> date:
     return date(*map(int, reversed(s.split("."))))
+
 
 class GoogleApi:
     def __init__(self):
         self.last_table_hash = ""
         self.service = self.auth()
-
+        self.not_changed_count = 0
 
     def auth(self) -> Resource:
         """authenticate to google api service"""
@@ -31,7 +33,6 @@ class GoogleApi:
         http_auth = credentials.authorize(httplib2.Http())
         return googleapiclient.discovery.build("sheets", "v4", http=http_auth)
 
-
     def get_values_raw(self) -> tuple[tuple[str]]:
         """get table values without formating"""
 
@@ -45,7 +46,6 @@ class GoogleApi:
             )
             .execute()["values"]
         )
-
 
     def get_values(self) -> list[dict]:
         """
@@ -73,19 +73,33 @@ class GoogleApi:
         ]
         """
 
-        return [{"number": int(row[1]), "cost_usd": int(row[2]), "delivery_date": to_date(row[3])} for row in self.get_values_raw()[1:]]
-
+        return [
+            {
+                "number": int(row[1]),
+                "cost_usd": int(row[2]),
+                "delivery_date": to_date(row[3]),
+            }
+            for row in self.get_values_raw()[1:]
+        ]
 
     async def wait_for_table_changes(self):
         """
-        check every `config.TABLE_CHECK_COOLDOWN` for changes, if any - return, else - asyncio.sleep
-        if runed first time after class created: return without waiting
+        check every `config.TABLE_CHECK_COOLDOWN` for changes, if any (or no changes for a day) - return, else - asyncio.sleep
+        if ran first time after class created: return without waiting
         """
 
         while 1:
             # cuz google didn't provide an easy way to set listener or i didn't find it. (websocket or something)
-            new_table_hash = sha1(str(self.get_values_raw()).encode("utf-8")).hexdigest()
+            new_table_hash = sha1(
+                str(self.get_values_raw()).encode("utf-8")
+            ).hexdigest()
             if new_table_hash == self.last_table_hash:
+                self.not_changed_count += 1
+                if (
+                    self.not_changed_count * TABLE_CHECK_COOLDOWN >= 86400
+                ):  # seconds in one day
+                    self.not_changed_count = 0
+                    return
                 await asyncio.sleep(TABLE_CHECK_COOLDOWN)
             else:
                 self.last_table_hash = new_table_hash
