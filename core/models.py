@@ -35,7 +35,7 @@ class Order(Base):
             "number": self.number,
             "cost_usd": self.cost_usd,
             "cost_rub": self.cost_rub,
-            "delivery_date": self.delivery_date,
+            "delivery_date": self.delivery_date.strftime("%d,%m,%Y"),
             "outdated_notified": self.outdated_notified,
             "archived": self.archived,
         }
@@ -54,7 +54,6 @@ class Order(Base):
             )
             for v in values
         ]
-
 
     def set_delivery_date(self, new_date: date):
         if self.delivery_date == new_date:

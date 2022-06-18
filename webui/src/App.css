@@ -19,6 +19,7 @@ body {
 .App > .left {
   grid-area: left;
   width: 50vw;
+  max-height: 100vh;
 }
 
 .App {
@@ -58,6 +59,10 @@ table, td, th {
 
 td, th {
   padding: 0.1rem 1rem 0.1rem 1rem;
+}
+
+.archived {
+  background-color: #a0a2aE;
 }
 
 .orders > thead {

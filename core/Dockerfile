@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir --upgrade pip \
 && poetry config virtualenvs.create true \
 && pip uninstall --yes poetry
 
-CMD bash -c "python main.py &; python web.py"
+CMD bash -c "python main.py & python web.py"

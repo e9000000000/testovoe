@@ -31,6 +31,7 @@ services:
     environment:
       - POSTGRES_PASSWORD
       - POSTGRES_DB
+      - TGBOT_TOKEN
 
   build-webui:
     container_name: build-webui

@@ -13,9 +13,9 @@ SHEET_DELIVERY_DATE_COL = "срок поставки"
 
 CBRF_RATES_URL = "https://www.cbr.ru/scripts/XML_daily.asp"
 
-POSTGRES_USER = "postgres"
+POSTGRES_USER = getenv("POSTGRES_DB", "postgres")
 POSTGRES_PASSWORD = getenv("POSTGRES_PASSWORD", "")
 POSTGRES_HOST = "postgres:5432"
-POSTGRES_DB = getenv("POSTGRES_DB", "")
+POSTGRES_DB = getenv("POSTGRES_DB", "test")
 
 TGBOT_TOKEN = getenv("TGBOT_TOKEN", "")

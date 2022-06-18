@@ -12,7 +12,7 @@ function Orders({ orders }) {
       </thead>
       <tbody>
         { orders ? orders.map((order, i) => (
-          <tr>
+          <tr className={order.archived ? "archived": ""}>
             <th>{i+1}</th>
             <th>{order.number}</th>
             <th>{order.cost_usd}</th>

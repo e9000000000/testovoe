@@ -22,7 +22,9 @@ class Db:
         new_orders = await Order.from_table_values(values)
 
         with Session(self.engine) as session:
-            not_archived_orders = session.query(Order).filter(Order.archived==False).all()
+            not_archived_orders = (
+                session.query(Order).filter(Order.archived == False).all()
+            )
             for order in not_archived_orders:
                 order.archived = True
 
@@ -94,4 +96,3 @@ class Db:
     async def get_orders(self) -> list[Order]:
         with Session(self.engine) as session:
             return session.query(Order).all()
-
