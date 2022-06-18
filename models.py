@@ -19,6 +19,7 @@ class Order(Base):
     cost_rub = Column(Integer)
     delivery_date = Column(Date)
     outdated_notified = Column(Boolean, default=False)
+    archived = Column(Boolean, default=False)
 
     def __repr__(self):
         return f"Order({self.id=} {self.number=} {self.cost_usd=} {self.cost_rub=} {self.delivery_date=} {self.outdated_notified=})"
@@ -26,6 +27,18 @@ class Order(Base):
     @property
     def outdated(self):
         return self.delivery_date < datetime.now().date()
+
+    @property
+    def serialized(self):
+        return {
+            "id": self.id,
+            "number": self.number,
+            "cost_usd": self.cost_usd,
+            "cost_rub": self.cost_rub,
+            "delivery_date": self.delivery_date,
+            "outdated_notified": self.outdated_notified,
+            "archived": self.archived,
+        }
 
     @staticmethod
     async def from_table_values(values: list[dict]) -> list:
@@ -41,6 +54,7 @@ class Order(Base):
             )
             for v in values
         ]
+
 
     def set_delivery_date(self, new_date: date):
         if self.delivery_date == new_date:

@@ -13,6 +13,8 @@ SQLAlchemy = "^1.4.37"
 psycopg2 = "^2.9.3"
 asyncstdlib = "^3.10.5"
 aiogram = "^2.20"
+Flask = {extras = ["async"], version = "^2.1.2"}
+Flask-RESTful = "^0.3.9"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"

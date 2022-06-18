@@ -22,6 +22,10 @@ class Db:
         new_orders = await Order.from_table_values(values)
 
         with Session(self.engine) as session:
+            not_archived_orders = session.query(Order).filter(Order.archived==False).all()
+            for order in not_archived_orders:
+                order.archived = True
+
             new_numbers = list(map(lambda v: v.number, new_orders))
             existing_orders: list[Order] = (
                 session.query(Order).filter(Order.number.in_(new_numbers)).all()
@@ -33,6 +37,7 @@ class Db:
                 order.cost_rub = new_order.cost_rub
                 order.cost_usd = new_order.cost_usd
                 order.set_delivery_date(new_order.delivery_date)
+                order.archived = False
 
             session.add_all(new_orders)
             session.commit()
@@ -85,3 +90,8 @@ class Db:
                 order.outdated_notified = True
                 session.merge(order)  # TODO: send all in one sql request
             session.commit()
+
+    async def get_orders(self) -> list[Order]:
+        with Session(self.engine) as session:
+            return session.query(Order).all()
+
